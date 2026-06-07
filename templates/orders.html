@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Moje zamówienia – Arcyn{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-10">
+  <div class="mb-10">
+    <h1 class="text-3xl font-black text-white">Moje zamówienia</h1>
+    <p class="text-gray-400 mt-1 text-sm">Tutaj odbierzesz dane do zakupionych kont po potwierdzeniu płatności.</p>
+  </div>
+
+  {% if orders %}
+  <div class="space-y-4">
+    {% for order in orders %}
+    <div class="glass rounded-2xl overflow-hidden {% if order.status == 'completed' %}border-green-500/30{% elif order.status == 'awaiting_payment' %}border-yellow-500/30{% elif order.status == 'cancelled' %}border-red-500/20{% else %}border-white/5{% endif %}" style="border-width: 1px;">
+
+      <div class="p-5 flex items-start justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-4">
+          {% if order.steam_accounts and order.steam_accounts.image_url %}
+          <img src="{{ order.steam_accounts.image_url }}" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+          {% else %}
+          <div class="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center text-2xl flex-shrink-0">🎮</div>
+          {% endif %}
+          <div>
+            <p class="font-bold text-white text-lg">{{ order.steam_accounts.name if order.steam_accounts else 'Konto Steam' }}</p>
+            <p class="text-gray-500 text-xs mt-0.5 font-mono">{{ order.id[:8] }}...{{ order.id[-8:] }}</p>
+            <p class="text-gray-600 text-xs">{{ order.created_at[:10] }}</p>
+          </div>
+        </div>
+
+        <div>
+          {% if order.status == 'completed' %}
+            <span class="inline-flex items-center gap-1.5 bg-green-500/15 text-green-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span> Zrealizowane
+            </span>
+          {% elif order.status == 'awaiting_payment' %}
+            <span class="inline-flex items-center gap-1.5 bg-yellow-500/15 text-yellow-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse inline-block"></span> Czeka na płatność
+            </span>
+          {% elif order.status == 'cancelled' %}
+            <span class="inline-flex items-center gap-1.5 bg-red-500/15 text-red-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-400 inline-block"></span> Anulowane
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1.5 bg-gray-500/15 text-gray-400 text-sm font-semibold px-3 py-1.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span> Przetwarzanie
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if order.status == 'completed' and order.steam_accounts %}
+      <div class="border-t border-white/5 bg-green-500/5 px-5 py-4">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Dane do konta Steam</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-black/30 rounded-xl px-4 py-3 group relative">
+            <p class="text-xs text-gray-500 mb-1">Login</p>
+            <code class="text-green-300 font-mono text-sm select-all break-all">{{ order.steam_accounts.login }}</code>
+            <button onclick="copyText('{{ order.steam_accounts.login }}', this)" class="absolute top-2 right-2 text-gray-600 hover:text-white transition text-xs opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded bg-white/5">📋</button>
+          </div>
+          <div class="bg-black/30 rounded-xl px-4 py-3 group relative">
+            <p class="text-xs text-gray-500 mb-1">Hasło</p>
+            <code class="text-green-300 font-mono text-sm select-all break-all">{{ order.steam_accounts.password }}</code>
+            <button onclick="copyText('{{ order.steam_accounts.password }}', this)" class="absolute top-2 right-2 text-gray-600 hover:text-white transition text-xs opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded bg-white/5">📋</button>
+          </div>
+        </div>
+
+        {% if order.steam_accounts.guard_key %}
+        <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3">
+          <p class="text-xs text-blue-400 font-semibold mb-2">🛡️ Ten konto ma Steam Guard</p>
+          <div class="space-y-1.5 text-xs text-gray-400">
+            <p><span class="text-blue-400 font-bold">1.</span> Wejdź na <a href="https://generujkod.pl" target="_blank" class="text-blue-400 underline hover:text-blue-300 font-semibold">generujkod.pl</a></p>
+            <p><span class="text-blue-400 font-bold">2.</span> Wklej poniższy klucz i kliknij „Generuj"</p>
+            <p><span class="text-blue-400 font-bold">3.</span> Zaloguj się do Steam — gdy poprosi o kod Guard, wpisz go</p>
+            <p class="text-yellow-500/80"><span class="font-bold">⚠️</span> Kod ważny tylko ~30 sekund — działaj szybko!</p>
+          </div>
+          <div class="mt-3 bg-black/30 rounded-xl px-3 py-2.5 group relative">
+            <p class="text-xs text-gray-500 mb-1">Klucz Guard</p>
+            <code class="text-blue-300 font-mono text-sm select-all break-all">{{ order.steam_accounts.guard_key }}</code>
+            <button onclick="copyText('{{ order.steam_accounts.guard_key }}', this)" class="absolute top-2 right-2 text-gray-600 hover:text-white transition text-xs opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded bg-white/5">📋</button>
+          </div>
+        </div>
+        {% endif %}
+
+        <p class="text-xs text-gray-600 mt-3">💡 Najedź na dane — pojawi się przycisk kopiowania</p>
+      </div>
+      {% elif order.status == 'awaiting_payment' %}
+      <div class="border-t border-white/5 px-5 py-3 bg-yellow-500/5">
+        <p class="text-yellow-400/80 text-sm flex items-center gap-2">
+          <span>💬</span> Sprawdź Discord — masz otwarty prywatny kanał z informacjami o płatności.
+        </p>
+      </div>
+      {% elif order.status == 'cancelled' %}
+      <div class="border-t border-white/5 px-5 py-3 bg-red-500/5">
+        <p class="text-red-400/70 text-sm flex items-center gap-2">
+          <span>❌</span> Zamówienie zostało anulowane. Skontaktuj się z administracją jeśli masz pytania.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="text-center py-32">
+    <div class="text-6xl mb-4 opacity-20">📋</div>
+    <p class="text-gray-400 text-lg font-semibold">Brak zamówień</p>
+    <p class="text-gray-600 text-sm mt-2">Złóż swoje pierwsze zamówienie w sklepie</p>
+    <a href="/" class="inline-block mt-6 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition">Przejdź do sklepu →</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅';
+    setTimeout(() => btn.textContent = '📋', 1500);
+  });
+}
+</script>
+{% endblock %}

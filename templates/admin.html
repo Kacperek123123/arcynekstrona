@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Panel admina – Arcyn{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-10">
+  <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+    <div>
+      <h1 class="text-3xl font-black text-white">⚙ Panel admina</h1>
+      <p class="text-gray-400 text-sm mt-1">Zarządzaj produktami i zamówieniami</p>
+    </div>
+    <button onclick="document.getElementById('add-modal').classList.remove('hidden')"
+      class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2">
+      + Dodaj produkt
+    </button>
+  </div>
+
+  {% if request.args.get('success') == 'added' %}
+  <div class="mb-4 glass border-green-500/30 text-green-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2" style="border-width:1px;">✅ Produkt dodany pomyślnie!</div>
+  {% endif %}
+  {% if request.args.get('success') == 'added' and request.args.get('warn') == 'guard_key' %}
+  <div class="mb-4 glass border-yellow-500/30 text-yellow-400 px-4 py-3 rounded-xl text-sm" style="border-width:1px;">⚠️ Produkt dodany, ale <b>klucz Guard nie został zapisany</b> — kolumna nie istnieje jeszcze w Supabase. Uruchom SQL poniżej.</div>
+  {% endif %}
+  {% if request.args.get('error') %}
+  <div class="mb-4 glass border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm" style="border-width:1px;">❌ Błąd: {{ request.args.get('error') }}</div>
+  {% endif %}
+
+  {% if not guard_key_ready %}
+  <div class="mb-6 glass border-yellow-500/20 rounded-2xl p-4" style="border-width:1px; background: rgba(234,179,8,0.05);">
+    <p class="text-yellow-400 font-semibold text-sm mb-2">⚠️ Wymagane: dodaj kolumny w Supabase SQL Editor</p>
+    <p class="text-gray-400 text-xs mb-3">Bez tego nie możesz dodawać produktów ani korzystać z klucza Guard. Wejdź na <b>supabase.com → projekt → SQL Editor</b> i wklej:</p>
+    <pre class="bg-black/40 rounded-xl px-4 py-3 text-green-300 text-xs overflow-x-auto select-all">ALTER TABLE steam_accounts ADD COLUMN IF NOT EXISTS image_url text;
+ALTER TABLE steam_accounts ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE steam_accounts ADD COLUMN IF NOT EXISTS guard_key text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS channel_id text;</pre>
+  </div>
+  {% endif %}
+
+  <!-- Statystyki -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+    <div class="glass rounded-2xl p-5 text-center">
+      <p class="text-3xl font-black text-green-400">{{ stats.available }}</p>
+      <p class="text-gray-400 text-sm mt-1">Dostępne</p>
+    </div>
+    <div class="glass rounded-2xl p-5 text-center">
+      <p class="text-3xl font-black text-gray-500">{{ stats.sold }}</p>
+      <p class="text-gray-400 text-sm mt-1">Sprzedane</p>
+    </div>
+    <div class="glass rounded-2xl p-5 text-center">
+      <p class="text-3xl font-black text-yellow-400">{{ stats.pending }}</p>
+      <p class="text-gray-400 text-sm mt-1">Oczekujące</p>
+    </div>
+    <div class="glass rounded-2xl p-5 text-center">
+      <p class="text-3xl font-black text-blue-400">{{ stats.completed }}</p>
+      <p class="text-gray-400 text-sm mt-1">Zrealizowane</p>
+    </div>
+  </div>
+
+  <!-- Produkty -->
+  <div class="mb-10">
+    <h2 class="text-xl font-bold text-white mb-4">Produkty</h2>
+    <div class="glass rounded-2xl overflow-hidden">
+      {% if products %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/5 text-gray-400">
+              <th class="text-left px-5 py-3 font-medium">Produkt</th>
+              <th class="text-left px-5 py-3 font-medium">Login</th>
+              <th class="text-left px-5 py-3 font-medium">Hasło</th>
+              <th class="text-left px-5 py-3 font-medium">Cena</th>
+              <th class="text-left px-5 py-3 font-medium">Status</th>
+              <th class="text-left px-5 py-3 font-medium">Akcje</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+            <tr class="border-b border-white/5 hover:bg-white/2 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  {% if p.image_url %}
+                  <img src="{{ p.image_url }}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+                  {% else %}
+                  <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm flex-shrink-0">🎮</div>
+                  {% endif %}
+                  <span class="text-white font-medium">{{ p.name }}</span>
+                </div>
+              </td>
+              <td class="px-5 py-3"><code class="text-gray-300 font-mono text-xs">{{ p.login }}</code></td>
+              <td class="px-5 py-3"><code class="text-gray-300 font-mono text-xs">{{ p.password }}</code></td>
+              <td class="px-5 py-3 font-bold text-white">{{ p.price }} PLN</td>
+              <td class="px-5 py-3">
+                {% if p.sold %}
+                  <span class="text-gray-500 text-xs">Sprzedane</span>
+                {% else %}
+                  <span class="text-green-400 text-xs">Dostępne</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-2">
+                  <form action="/admin/toggle/{{ p.id }}" method="POST">
+                    <button class="text-xs text-yellow-400 hover:text-yellow-300 transition px-2 py-1 rounded hover:bg-yellow-400/10">
+                      {{ 'Przywróć' if p.sold else 'Ukryj' }}
+                    </button>
+                  </form>
+                  <form action="/admin/delete/{{ p.id }}" method="POST" onsubmit="return confirm('Usunąć ten produkt?')">
+                    <button class="text-xs text-red-400 hover:text-red-300 transition px-2 py-1 rounded hover:bg-red-400/10">Usuń</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-gray-500">Brak produktów. Dodaj pierwszy!</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Ostatnie zamówienia -->
+  <div>
+    <h2 class="text-xl font-bold text-white mb-4">Ostatnie zamówienia</h2>
+    <div class="glass rounded-2xl overflow-hidden">
+      {% if orders %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/5 text-gray-400">
+              <th class="text-left px-5 py-3 font-medium">ID</th>
+              <th class="text-left px-5 py-3 font-medium">Produkt</th>
+              <th class="text-left px-5 py-3 font-medium">Discord ID</th>
+              <th class="text-left px-5 py-3 font-medium">Status</th>
+              <th class="text-left px-5 py-3 font-medium">Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in orders %}
+            <tr class="border-b border-white/5 hover:bg-white/2 transition">
+              <td class="px-5 py-3"><code class="text-gray-400 text-xs">{{ o.id[:8] }}...</code></td>
+              <td class="px-5 py-3 text-gray-300">{{ o.steam_accounts.name if o.steam_accounts else '—' }}</td>
+              <td class="px-5 py-3"><code class="text-gray-400 text-xs">{{ o.discord_id }}</code></td>
+              <td class="px-5 py-3">
+                {% if o.status == 'completed' %}
+                  <span class="text-green-400 text-xs">✅ Zrealizowane</span>
+                {% elif o.status == 'awaiting_payment' %}
+                  <span class="text-yellow-400 text-xs">⏳ Płatność</span>
+                {% elif o.status == 'cancelled' %}
+                  <span class="text-red-400 text-xs">❌ Anulowane</span>
+                {% else %}
+                  <span class="text-gray-400 text-xs">🕐 Pending</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3 text-gray-500 text-xs">{{ o.created_at[:10] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-gray-500">Brak zamówień</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal: dodaj produkt -->
+<div id="add-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4 py-6 overflow-y-auto">
+  <div class="glass rounded-2xl p-6 w-full max-w-lg my-auto" style="border-width:1px;">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-white">Nowy produkt</h2>
+      <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-gray-400 hover:text-white transition text-xl leading-none">✕</button>
+    </div>
+
+    <form action="/admin/add" method="POST" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Nazwa gry / produktu *</label>
+          <input type="text" name="name" required placeholder="np. Counter-Strike 2 — Prime" class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Login *</label>
+          <input type="text" name="login" required placeholder="login Steam" class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Hasło *</label>
+          <input type="text" name="password" required placeholder="hasło Steam" class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Cena (PLN) *</label>
+          <input type="number" name="price" step="0.01" min="0" required placeholder="49.99" class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">URL zdjęcia</label>
+          <input type="url" name="image_url" placeholder="https://..." class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+          <p class="text-gray-600 text-xs mt-1">Wklej link do obrazka (np. okładka gry ze Steam)</p>
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">Opis</label>
+          <textarea name="description" rows="3" placeholder="Opis konta, zawartość, poziom, skiny itp..." class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500 resize-none"></textarea>
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">🛡️ Klucz Steam Guard <span class="text-gray-600 font-normal normal-case">(opcjonalnie)</span></label>
+          <input type="text" name="guard_key" placeholder="Klucz do generujkod.pl" class="w-full bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500 font-mono">
+          <p class="text-gray-600 text-xs mt-1">Jeśli podasz klucz, klient zobaczy instrukcję logowania z linkiem do generujkod.pl</p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('add-modal').classList.add('hidden')" class="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 px-4 rounded-xl transition text-sm">Anuluj</button>
+        <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl transition text-sm">Dodaj produkt</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
