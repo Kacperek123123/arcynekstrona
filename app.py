@@ -17,7 +17,6 @@ app = Flask(__name__)
 def health_check():
     return "Bot jest aktywny!", 200
 
-# Wątek pingujący samego siebie co 5 minut (opcjonalnie, jeśli używasz UptimeRobot)
 def ping_self():
     while True:
         try:
@@ -67,11 +66,10 @@ ADMIN_IDS = [i.strip() for i in os.environ.get("ADMIN_IDS", "").split(",") if i.
 
 supabase = create_client(SUPABASE_URL, SERVICE_KEY)
 
+# --- POPRAWIONA FUNKCJA ---
 def get_redirect_uri():
-    domain = os.environ.get("REPLIT_DEV_DOMAIN")
-    if domain:
-        return f"https://{domain}/auth/callback"
-    return request.host_url.rstrip("/") + "/auth/callback"
+    return "https://arcynek.com.pl/auth/callback"
+# --------------------------
 
 def is_admin(user):
     return user and user.get("id") in ADMIN_IDS
