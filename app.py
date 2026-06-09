@@ -134,12 +134,19 @@ def auth_callback():
 
     user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization": f"Bearer {access_token}"})
     u = user_res.json()
-    session["user"] = {
+session["user"] = {
         "id": u["id"],
         "username": u.get("global_name") or u.get("username"),
         "avatar": u.get("avatar"),
         "raw_username": u.get("username"),
     }
+    
+    # Rejestruj logowanie
+    try:
+        supabase.table("users_logins").upsert({"discord_id": u["id"]}).execute()
+    except Exception as e:
+        print(f"Błąd zapisu logowania: {e}")
+        
     return redirect(url_for("index"))
 
 @app.route("/logout")
@@ -188,6 +195,9 @@ def create_order():
     user = session.get("user")
     if not user:
         return jsonify({"error": "Nie jesteś zalogowany"}), 401
+        
+    if supabase.table("blacklist").select("discord_id").eq("discord_id", user["id"]).execute().data:
+    return jsonify({"error": "Jesteś na czarnej liście"}), 403
     data = request.get_json()
     product_id = data.get("product_id")
     if not product_id:
@@ -202,6 +212,20 @@ def create_order():
         "payment_method": "manual",
     }).select().execute().data[0]
     return jsonify(order)
+
+@app.route("/api/review", methods=["POST"])
+def add_review():
+    user = session.get("user")
+    if not user: return jsonify({"error": "Brak logowania"}), 401
+    data = request.get_json()
+    # Zapisz do bazy
+    supabase.table("reviews").insert({
+        "discord_id": user["id"],
+        "rating": data["rating"],
+        "comment": data.get("comment", "")
+    }).execute()
+    # Tu później dołączymy kod wysyłający na Discord
+    return jsonify({"success": True})
 
 @app.route("/admin")
 def admin():
