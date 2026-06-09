@@ -132,7 +132,7 @@ def auth_callback():
     if not access_token:
         return redirect(url_for("index"))
 
-user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization": f"Bearer {access_token}"})
+    user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization": f"Bearer {access_token}"})
     u = user_res.json()
     
     session["user"] = {
@@ -149,7 +149,6 @@ user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization
         print(f"Błąd zapisu logowania: {e}")
         
     return redirect(url_for("index"))
-
 @app.route("/logout")
 def logout():
     session.pop("user", None)
