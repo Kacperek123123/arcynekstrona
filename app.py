@@ -197,7 +197,7 @@ def create_order():
         return jsonify({"error": "Nie jesteś zalogowany"}), 401
         
     if supabase.table("blacklist").select("discord_id").eq("discord_id", user["id"]).execute().data:
-    return jsonify({"error": "Jesteś na czarnej liście"}), 403
+       return jsonify({"error": "Jesteś na czarnej liście"}), 403
     data = request.get_json()
     product_id = data.get("product_id")
     if not product_id:
