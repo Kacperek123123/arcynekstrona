@@ -80,7 +80,7 @@ def index():
     products = []
     sort = request.args.get("sort", "newest")
     if user:
-        q = supabase.table("steam_accounts").select("id, name, price, image_url, description").eq("sold", False)
+        q = supabase.table("steam_accounts").select("id, name, price, image_url, description")
         if sort == "price_asc":
             q = q.order("price", desc=False)
         elif sort == "price_desc":
@@ -93,7 +93,7 @@ def index():
 @app.route("/produkt/<product_id>")
 def product_detail(product_id):
     user = session.get("user")
-    res = supabase.table("steam_accounts").select("id, name, price, image_url, description").eq("id", product_id).eq("sold", False).execute()
+    res = supabase.table("steam_accounts").select("id, name, price, image_url, description").eq("id", product_id).execute()
     if not res.data:
         return redirect(url_for("index"))
     product = res.data[0]
@@ -192,12 +192,9 @@ def create_order():
     product_id = data.get("product_id")
     if not product_id:
         return jsonify({"error": "Brak ID produktu"}), 400
-    available = supabase.table("steam_accounts").select("id").eq("id", product_id).eq("sold", False).execute().data
-    if not available:
-        return jsonify({"error": "Produkt jest już niedostępny"}), 400
-    in_progress = supabase.table("orders").select("id").eq("product_id", product_id).in_("status", ["pending", "awaiting_payment"]).execute().data
-    if in_progress:
-        return jsonify({"error": "Zamówienie na ten produkt jest już w trakcie realizacji"}), 400
+    
+    # Usuwamy sprawdzenie czy produkt ma "sold": False oraz czy jest w "pending"
+    # Teraz po prostu tworzymy zamówienie:
     order = supabase.table("orders").insert({
         "product_id": product_id,
         "discord_id": user["id"],
