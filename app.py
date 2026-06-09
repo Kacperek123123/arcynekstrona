@@ -132,9 +132,10 @@ def auth_callback():
     if not access_token:
         return redirect(url_for("index"))
 
-    user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization": f"Bearer {access_token}"})
+user_res = http.get("https://discord.com/api/users/@me", headers={"Authorization": f"Bearer {access_token}"})
     u = user_res.json()
-session["user"] = {
+    
+    session["user"] = {
         "id": u["id"],
         "username": u.get("global_name") or u.get("username"),
         "avatar": u.get("avatar"),
