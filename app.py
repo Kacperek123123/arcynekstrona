@@ -154,6 +154,25 @@ def logout():
     session.pop("user", None)
     return redirect(url_for("index"))
 
+@app.route("/api/submit_review", methods=["POST"])
+def submit_review():
+    data = request.json
+    order_id = data.get("order_id")
+    rating = data.get("rating")
+    comment = data.get("comment")
+
+    # Zapis do Twojej istniejącej tabeli 'reviews'
+    try:
+        supabase.table("reviews").insert({
+            "order_id": order_id,
+            "rating": rating,
+            "comment": comment
+        }).execute()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Błąd zapisu opinii: {e}")
+        return jsonify({"status": "error"}), 500
+
 @app.route("/moje-zamowienia")
 def my_orders():
     user = session.get("user")
