@@ -81,6 +81,22 @@
         </div>
         {% endif %}
 
+        <div class="mt-6 border-t border-white/10 pt-4">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Zostaw opinię o zamówieniu</p>
+            <div id="review-section-{{ order.id }}">
+                <div class="flex items-center gap-4 mb-3">
+                    <select id="rating-{{ order.id }}" class="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        <option value="5">⭐⭐⭐⭐⭐ (Super)</option>
+                        <option value="4">⭐⭐⭐⭐ (Dobre)</option>
+                        <option value="3">⭐⭐⭐ (Ok)</option>
+                        <option value="2">⭐⭐ (Słabe)</option>
+                        <option value="1">⭐ (Bardzo słabe)</option>
+                    </select>
+                </div>
+                <input type="text" id="comment-{{ order.id }}" maxlength="100" placeholder="Krótki komentarz (opcjonalnie)..." class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white mb-3 focus:outline-none focus:border-blue-500">
+                <button onclick="submitReview('{{ order.id }}')" class="w-full bg-white/5 hover:bg-blue-600 text-white text-sm font-bold py-2.5 rounded-lg transition border border-white/10">Wyślij opinię</button>
+            </div>
+        </div>
         <p class="text-xs text-gray-600 mt-3">💡 Najedź na dane — pojawi się przycisk kopiowania</p>
       </div>
       {% elif order.status == 'awaiting_payment' %}
@@ -116,6 +132,34 @@ function copyText(text, btn) {
     btn.textContent = '✅';
     setTimeout(() => btn.textContent = '📋', 1500);
   });
+}
+
+async function submitReview(orderId) {
+    const rating = document.getElementById(`rating-${orderId}`).value;
+    const comment = document.getElementById(`comment-${orderId}`).value;
+    const btn = event.target;
+    
+    btn.disabled = true;
+    btn.textContent = "Wysyłanie...";
+
+    try {
+        const response = await fetch('/api/submit_review', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ order_id: orderId, rating: rating, comment: comment })
+        });
+        
+        if(response.ok) {
+            document.getElementById(`review-section-${orderId}`).innerHTML = 
+                "<div class='py-4 text-center'><p class='text-green-400 text-sm font-bold'>✅ Dziękujemy za opinię!</p></div>";
+        } else {
+            throw new Error();
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = "Wyślij opinię";
+        alert("Błąd przy wysyłaniu. Spróbuj później.");
+    }
 }
 </script>
 {% endblock %}
