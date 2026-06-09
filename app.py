@@ -156,17 +156,15 @@ def logout():
 
 @app.route("/api/submit_review", methods=["POST"])
 def submit_review():
+    user = session.get("user")
+    if not user: return jsonify({"error": "Brak logowania"}), 401
+    
     data = request.json
-    order_id = data.get("order_id")
-    rating = data.get("rating")
-    comment = data.get("comment")
-
-    # Zapis do Twojej istniejącej tabeli 'reviews'
     try:
         supabase.table("reviews").insert({
-            "order_id": order_id,
-            "rating": rating,
-            "comment": comment
+            "discord_id": user["id"],  # Tutaj zmienione z order_id na discord_id
+            "rating": int(data.get("rating")),
+            "comment": data.get("comment")
         }).execute()
         return jsonify({"status": "success"}), 200
     except Exception as e:
