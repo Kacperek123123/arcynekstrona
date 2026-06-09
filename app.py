@@ -160,15 +160,33 @@ def submit_review():
     if not user: return jsonify({"error": "Brak logowania"}), 401
     
     data = request.json
+    rating = int(data.get("rating"))
+    comment = data.get("comment", "")
+
     try:
+        # 1. Zapis do bazy
         supabase.table("reviews").insert({
-            "discord_id": user["id"],  # Tutaj zmienione z order_id na discord_id
-            "rating": int(data.get("rating")),
-            "comment": data.get("comment")
+            "discord_id": user["id"],
+            "rating": rating,
+            "comment": comment
         }).execute()
+
+        # 2. WYSYŁKA NA DISCORDA (Wstaw tutaj swój Webhook URL)
+        webhook_url = "https://discord.com/api/webhooks/1513311925222637658/nDamKmVuoZZbHtzVD9Dm_pz3Nzn38idvnztJeleADszaNX4-BuPfHBLI0GtRc2TTNgDb" 
+        embed = {
+            "title": "⭐ Nowa opinia o zakupie!",
+            "color": 0xf1c40f,
+            "fields": [
+                {"name": "Użytkownik", "value": f"<@{user['id']}>", "inline": True},
+                {"name": "Ocena", "value": "⭐" * rating, "inline": True},
+                {"name": "Opinia", "value": comment if comment else "Brak komentarza"}
+            ]
+        }
+        http.post(webhook_url, json={"embeds": [embed]})
+
         return jsonify({"status": "success"}), 200
     except Exception as e:
-        print(f"Błąd zapisu opinii: {e}")
+        print(f"Błąd: {e}")
         return jsonify({"status": "error"}), 500
 
 @app.route("/moje-zamowienia")
