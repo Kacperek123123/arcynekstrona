@@ -79,21 +79,35 @@ def index():
     user = session.get("user")
     products = []
     sort = request.args.get("sort", "newest")
+    # Pobieramy typ z adresu URL, domyślnie 'all'
+    account_type = request.args.get("type", "all")
+    
     if user:
-        q = supabase.table("steam_accounts").select("id, name, price, image_url, description")
+        # Zmieniono select, aby pobierał też 'type'
+        q = supabase.table("steam_accounts").select("id, name, price, image_url, description, type")
+        
+        # Filtrowanie po typie, jeśli nie wybrano 'all'
+        if account_type != "all":
+            q = q.eq("type", account_type)
+            
+        # Sortowanie
         if sort == "price_asc":
             q = q.order("price", desc=False)
         elif sort == "price_desc":
             q = q.order("price", desc=True)
         else:
             q = q.order("created_at", desc=True)
+            
         products = q.execute().data or []
-    return render_template("index.html", user=user, products=products, is_admin=is_admin(user), sort=sort)
+        
+    return render_template("index.html", user=user, products=products, 
+                           is_admin=is_admin(user), sort=sort, type=account_type)
 
 @app.route("/produkt/<product_id>")
 def product_detail(product_id):
     user = session.get("user")
-    res = supabase.table("steam_accounts").select("id, name, price, image_url, description").eq("id", product_id).execute()
+    # Zmieniono select, aby pobierał też 'type'
+    res = supabase.table("steam_accounts").select("id, name, price, image_url, description, type").eq("id", product_id).execute()
     if not res.data:
         return redirect(url_for("index"))
     product = res.data[0]
@@ -289,6 +303,7 @@ def admin_add():
         "login": request.form["login"],
         "password": request.form["password"],
         "price": float(request.form["price"]),
+        "type": request.form.get("type", "steam"),
         "image_url": request.form.get("image_url", "").strip() or None,
         "description": request.form.get("description", "").strip() or None,
         "sold": False,
